@@ -51,13 +51,19 @@ const playgroundHTML = `<!DOCTYPE html>
       border-bottom: 1px solid var(--panel-border);
       background: rgba(10, 14, 23, 0.9);
       backdrop-filter: blur(12px);
-      padding: 16px 32px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      padding: 16px 40px;
       position: sticky;
       top: 0;
       z-index: 100;
+    }
+
+    .header-inner {
+      max-width: 1920px;
+      width: 100%;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
 
     .brand {
@@ -145,18 +151,42 @@ const playgroundHTML = `<!DOCTYPE html>
     /* Main Workspace */
     main {
       flex: 1;
-      max-width: 1600px;
+      max-width: 1920px;
       width: 100%;
       margin: 0 auto;
-      padding: 32px 32px 64px 32px;
+      padding: 32px 40px 64px 40px;
       display: grid;
-      grid-template-columns: 480px 1fr;
-      gap: 32px;
+      grid-template-columns: minmax(380px, 460px) minmax(0, 1fr);
+      gap: 36px;
+      align-items: start;
+      box-sizing: border-box;
     }
 
-    @media (max-width: 1100px) {
+    @media (max-width: 1200px) {
       main {
         grid-template-columns: 1fr;
+        padding: 24px 20px 48px 20px;
+        gap: 24px;
+      }
+      header {
+        padding: 16px 20px;
+      }
+      footer {
+        padding: 20px 20px;
+      }
+    }
+
+    @media (min-width: 1800px) {
+      main {
+        grid-template-columns: 500px minmax(0, 1fr);
+        gap: 48px;
+        padding: 40px 48px 80px 48px;
+      }
+      header {
+        padding: 18px 48px;
+      }
+      footer {
+        padding: 24px 48px;
       }
     }
 
@@ -172,6 +202,7 @@ const playgroundHTML = `<!DOCTYPE html>
       flex-direction: column;
       gap: 20px;
       position: relative;
+      min-width: 0;
     }
 
     .panel-header {
@@ -507,13 +538,21 @@ const playgroundHTML = `<!DOCTYPE html>
     /* Footer */
     footer {
       border-top: 1px solid var(--panel-border);
-      padding: 24px 32px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      padding: 24px 40px;
       color: var(--slate-muted);
       font-size: 12px;
       font-family: 'JetBrains Mono', monospace;
+    }
+
+    .footer-inner {
+      max-width: 1920px;
+      width: 100%;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
     }
   </style>
 </head>
@@ -521,19 +560,21 @@ const playgroundHTML = `<!DOCTYPE html>
 
   <!-- Header -->
   <header>
-    <a href="/" class="brand">
-      <div class="brand-dot"></div>
-      <div class="brand-title">NEURALWIRE</div>
-      <div class="brand-badge">OG ENGINE v1.0</div>
-    </a>
+    <div class="header-inner">
+      <a href="/" class="brand">
+        <div class="brand-dot"></div>
+        <div class="brand-title">NEURALWIRE</div>
+        <div class="brand-badge">OG ENGINE v1.0</div>
+      </a>
 
-    <div class="header-links">
-      <div class="status-indicator">
-        <div class="status-dot"></div>
-        <span>ENGINE OPERATIONAL</span>
+      <div class="header-links">
+        <div class="status-indicator">
+          <div class="status-dot"></div>
+          <span>ENGINE OPERATIONAL</span>
+        </div>
+        <a href="/api/health" class="nav-link" target="_blank">// HEALTH</a>
+        <a href="https://neuralwire.info" class="nav-link" target="_blank">NEURALWIRE.INFO ↗</a>
       </div>
-      <a href="/api/health" class="nav-link" target="_blank">// HEALTH</a>
-      <a href="https://neuralwire.info" class="nav-link" target="_blank">NEURALWIRE.INFO ↗</a>
     </div>
   </header>
 
@@ -734,8 +775,10 @@ const playgroundHTML = `<!DOCTYPE html>
 
   <!-- Footer -->
   <footer>
-    <div>NEURALWIRE MEDIA // OPEN GRAPH GENERATOR MICROSERVICE</div>
-    <div>HTTP CACHE: S-MAXAGE=604800 // SATORI + RESVG POWERED</div>
+    <div class="footer-inner">
+      <div>NEURALWIRE MEDIA // OPEN GRAPH GENERATOR MICROSERVICE</div>
+      <div>HTTP CACHE: S-MAXAGE=604800 // SATORI + RESVG POWERED</div>
+    </div>
   </footer>
 
   <script>
