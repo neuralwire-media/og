@@ -77,25 +77,21 @@ jobs:
         run: npm run typecheck
 
   # ============================================================================
-  # 3. Unit & Integration Tests (Matrix: Node 20.x & 22.x)
+  # 3. Unit & Integration Tests (Node 22.x)
   # ============================================================================
   test:
-    name: Test (Node ${{ matrix.node-version }})
+    name: Test (Node 22.x)
     needs: changes
     if: ${{ needs.changes.outputs.code == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: [20.x, 22.x]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js ${{ matrix.node-version }}
+      - name: Setup Node.js 22.x
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 22.x
           cache: 'npm'
 
       - name: Install Dependencies
