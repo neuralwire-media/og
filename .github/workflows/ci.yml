@@ -1,0 +1,206 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  # ============================================================================
+  # 1. Path Filter Job (using dorny/paths-filter)
+  # ============================================================================
+  changes:
+    name: Detect Changed Paths
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+      docker: ${{ steps.filter.outputs.docker }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Filter Changed Paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            code:
+              - 'src/**'
+              - 'assets/**'
+              - 'tests/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'tsconfig.json'
+              - 'vitest.config.ts'
+              - '.github/workflows/ci.yml'
+            docker:
+              - 'Dockerfile'
+              - 'compose.yml'
+              - '.dockerignore'
+              - 'src/**'
+              - 'assets/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'tsconfig.json'
+              - '.github/workflows/ci.yml'
+
+  # ============================================================================
+  # 2. Type Check & Lint Job
+  # ============================================================================
+  typecheck:
+    name: TypeScript Check
+    needs: changes
+    if: ${{ needs.changes.outputs.code == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Type Check
+        run: npm run typecheck
+
+  # ============================================================================
+  # 3. Unit & Integration Tests (Matrix: Node 20.x & 22.x)
+  # ============================================================================
+  test:
+    name: Test (Node ${{ matrix.node-version }})
+    needs: changes
+    if: ${{ needs.changes.outputs.code == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20.x, 22.x]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Vitest Suite
+        run: npm run test
+
+      - name: Verify Production Build
+        run: npm run build
+
+  # ============================================================================
+  # 4. Docker Build & Container Health Validation
+  # ============================================================================
+  docker-build-test:
+    name: Docker Build & Healthcheck
+    needs: changes
+    if: ${{ needs.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true
+          tags: neuralwire/og:ci-test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Start Container for Health Validation
+        run: |
+          docker run -d --name og-ci-container -p 3000:3000 neuralwire/og:ci-test
+          sleep 4
+
+      - name: Verify Health Endpoint
+        run: |
+          HEALTH_RES=$(curl --fail --silent http://localhost:3000/api/health)
+          echo "Health Response: $HEALTH_RES"
+          echo "$HEALTH_RES" | grep '"status":"ok"' || exit 1
+
+      - name: Verify Image Generation Endpoint
+        run: |
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:3000/api/og?title=CI%20Validation%20Test")
+          echo "HTTP Code: $HTTP_CODE"
+          [ "$HTTP_CODE" -eq 200 ] || exit 1
+
+      - name: Stop Container
+        if: always()
+        run: docker stop og-ci-container && docker rm og-ci-container || true
+
+  # ============================================================================
+  # 5. Required Status Check Gatekeeper (Strict Branch Protection Check)
+  # ============================================================================
+  ci-status:
+    name: CI / Required Status Checks
+    needs: [changes, typecheck, test, docker-build-test]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate Check Results
+        run: |
+          CHANGES_RES="${{ needs.changes.result }}"
+          TYPECHECK_RES="${{ needs.typecheck.result }}"
+          TEST_RES="${{ needs.test.result }}"
+          DOCKER_RES="${{ needs.docker-build-test.result }}"
+
+          echo "=== CI Pipeline Execution Summary ==="
+          echo "Changes Filter: $CHANGES_RES"
+          echo "Typecheck:      $TYPECHECK_RES"
+          echo "Tests Matrix:   $TEST_RES"
+          echo "Docker Check:   $DOCKER_RES"
+          echo "====================================="
+
+          # Fail if changes filter failed
+          if [ "$CHANGES_RES" = "failure" ] || [ "$CHANGES_RES" = "cancelled" ]; then
+            echo "::error::Path filtering failed or was cancelled."
+            exit 1
+          fi
+
+          # Fail if typecheck failed
+          if [ "$TYPECHECK_RES" = "failure" ] || [ "$TYPECHECK_RES" = "cancelled" ]; then
+            echo "::error::TypeScript typecheck failed or was cancelled."
+            exit 1
+          fi
+
+          # Fail if tests failed
+          if [ "$TEST_RES" = "failure" ] || [ "$TEST_RES" = "cancelled" ]; then
+            echo "::error::Unit / Integration tests failed or were cancelled."
+            exit 1
+          fi
+
+          # Fail if docker validation failed
+          if [ "$DOCKER_RES" = "failure" ] || [ "$DOCKER_RES" = "cancelled" ]; then
+            echo "::error::Docker build / container validation failed or was cancelled."
+            exit 1
+          fi
+
+          echo "All required CI status checks passed successfully."
+          exit 0
