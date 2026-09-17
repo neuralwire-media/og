@@ -240,7 +240,8 @@ The repository includes GitHub Actions CI/CD workflows tailored to the `Main Bra
 - **Strict Status Check Gatekeeper (`CI / Required Status Checks`)**: Evaluates all sub-jobs and provides a unified required check compatible with GitHub's `strict_required_status_checks_policy: true`.
 
 ### 2. Continuous Delivery (`.github/workflows/cd.yml`)
-- Automatically builds and publishes multi-architecture container images (`linux/amd64`, `linux/arm64`) to GitHub Container Registry (`ghcr.io/neuralwire-media/og`) upon release or merge to `main`.
+- **Container Registry Publishing**: Automatically builds and pushes multi-architecture container images (`linux/amd64`, `linux/arm64`) to GitHub Container Registry (`ghcr.io/neuralwire-media/og`) upon release or merge to `main`.
+- **Automated VPS Deployment (SSH)**: Connects to the host using organization secrets (`VPS_HOST`, `VPS_USERNAME`, `VPS_SSH_KEY`, and optional `VPS_PORT`), pulls the fresh image, gracefully replaces the running container `neuralwire-og`, and validates the `/api/health` check endpoint.
 
 ---
 
