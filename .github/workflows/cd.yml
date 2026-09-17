@@ -8,6 +8,10 @@ on:
       - 'v*.*.*'
   workflow_dispatch:
 
+concurrency:
+  group: cd-vps-deployment
+  cancel-in-progress: false
+
 permissions:
   contents: read
   packages: write
