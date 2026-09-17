@@ -134,20 +134,36 @@ jobs:
       - name: Start Container for Health Validation
         run: |
           docker run -d --name og-ci-container -p 3000:3000 neuralwire/og:ci-test
-          sleep 4
-          docker ps
 
       - name: Verify Health Endpoint
         run: |
-          HEALTH_RES=$(curl --retry 5 --retry-delay 2 --retry-connrefused --fail --silent http://127.0.0.1:3000/api/health) || (docker logs og-ci-container && exit 1)
-          echo "Health Response: $HEALTH_RES"
-          echo "$HEALTH_RES" | grep '"status":"ok"' || (docker logs og-ci-container && exit 1)
+          echo "Waiting for container to start..."
+          HEALTH_RES=""
+          for i in {1..15}; do
+            if RES=$(curl -s http://127.0.0.1:3000/api/health 2>/dev/null) && echo "$RES" | grep -q '"status":"ok"'; then
+              HEALTH_RES="$RES"
+              echo "Health check passed on attempt $i: $HEALTH_RES"
+              break
+            fi
+            echo "Waiting for server to become healthy (attempt $i/15)..."
+            sleep 2
+          done
+
+          if [ -z "$HEALTH_RES" ]; then
+            echo "::error::Health check timed out after 30 seconds!"
+            docker logs og-ci-container
+            exit 1
+          fi
 
       - name: Verify Image Generation Endpoint
         run: |
-          HTTP_CODE=$(curl --retry 5 --retry-delay 2 --retry-connrefused -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:3000/api/og?title=CI%20Validation%20Test") || (docker logs og-ci-container && exit 1)
-          echo "HTTP Code: $HTTP_CODE"
-          [ "$HTTP_CODE" -eq 200 ] || (docker logs og-ci-container && exit 1)
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:3000/api/og?title=CI%20Validation%20Test")
+          echo "Image Generation HTTP Code: $HTTP_CODE"
+          if [ "$HTTP_CODE" -ne 200 ]; then
+            echo "::error::Image generation endpoint failed with HTTP $HTTP_CODE"
+            docker logs og-ci-container
+            exit 1
+          fi
 
       - name: Stop Container
         if: always()
