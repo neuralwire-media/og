@@ -329,7 +329,7 @@ const playgroundHTML = `<!DOCTYPE html>
       overflow: hidden;
       border: 1px solid var(--panel-border);
       box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
-      background: #000;
+      background: #0A0E17;
       aspect-ratio: 1200 / 630;
       display: flex;
       align-items: center;
@@ -339,7 +339,7 @@ const playgroundHTML = `<!DOCTYPE html>
     .preview-img {
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
       display: block;
       transition: opacity 0.2s ease-in-out;
     }

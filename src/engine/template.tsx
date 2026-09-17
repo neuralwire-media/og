@@ -19,10 +19,10 @@ function getIssueDate(customDate?: string): string {
  */
 function getTitleFontSize(title: string): number {
   const len = title.length;
-  if (len <= 45) return 56;
-  if (len <= 80) return 48;
-  if (len <= 110) return 42;
-  return 36;
+  if (len <= 40) return 54;
+  if (len <= 75) return 46;
+  if (len <= 110) return 40;
+  return 34;
 }
 
 /**
@@ -285,11 +285,12 @@ export function OGTemplate(params: SanitizedOGParams) {
           style={{
             fontFamily: 'Newsreader, Georgia, serif',
             fontSize: `${fontSize}px`,
-            lineHeight: 1.14,
+            lineHeight: 1.15,
             fontWeight: 600,
             color: '#F8FAFC',
             letterSpacing: '-0.02em',
             display: 'flex',
+            flexWrap: 'wrap',
             maxHeight: '220px',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
