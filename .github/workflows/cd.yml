@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.github/pull_request_template.md'
+      - '.gitignore'
     tags:
       - 'v*.*.*'
   workflow_dispatch:
